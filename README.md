@@ -1,143 +1,235 @@
-# Deep Research Assistant
+# Deep Research Assistant — Multi-Agent Web Research System
 
-基于 HelloAgents 框架的深度研究助手，支持多 Agent 协作完成网络调研并生成结构化报告。
+> **From a single topic to a structured research report — powered by a collaborative multi-agent pipeline.**
 
-## 项目结构
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Vue](https://img.shields.io/badge/Vue-3.x-4FC08D?logo=vue.js)](https://vuejs.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-```
-agentProjet/
-├── backend/                    # FastAPI 后端
-│   ├── src/
-│   │   ├── main.py            # FastAPI 入口，REST & SSE 端点
-│   │   ├── agent.py           # DeepResearchAgent 协调器
-│   │   ├── config.py          # Pydantic 配置模型
-│   │   ├── models.py          # 数据模型（TodoItem, SummaryState）
-│   │   ├── prompts.py         # Agent 提示词模板
-│   │   ├── utils.py           # 工具函数
-│   │   └── services/
-│   │       ├── planner.py     # 研究规划 Agent
-│   │       ├── search.py      # 搜索调度（Tavily/DuckDuckGo）
-│   │       ├── summarizer.py  # 任务总结 Agent
-│   │       ├── reporter.py    # 报告撰写 Agent
-│   │       ├── tool_events.py # 工具调用事件追踪
-│   │       └── notes.py       # 笔记工具
-│   └── pyproject.toml
-├── frontend/                   # Vue 3 + TypeScript 前端
-│   ├── src/
-│   │   ├── App.vue            # 主页面组件
-│   │   ├── services/api.ts    # SSE 流式 API 封装
-│   │   └── main.ts            # 入口
-│   └── package.json
-└── README.md
-```
+A deep research assistant that automatically **plans, searches, summarizes, and synthesizes** research on any topic. Built on a multi-agent architecture where specialized agents collaborate to produce structured, well-sourced reports — all streamed in real-time to the browser.
 
-## 工作流程
+---
+
+## 🎯 What It Does
 
 ```
-用户输入研究主题
-       │
-       ▼
-┌─────────────────┐
-│  研究规划 Expert  │  → 将主题拆解为 3~5 个待办任务
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────┐
-│  任务执行循环    │ ──▶  │ 网络搜索 Tavily │
-│  (并行执行)      │      └──────┬───────┘
-└────────┬────────┘             │
-         │                      ▼
-         │              ┌──────────────┐
-         │              │ 任务总结 Expert│ → 写入笔记
-         │              └──────────────┘
-         ▼
-┌─────────────────┐
-│  报告撰写 Expert  │  → 综合所有任务笔记生成报告
-└─────────────────┘
+User: "What's the state of multi-agent systems in 2025?"
+                    │
+                    ▼
+    ┌──────────────────────────────────────┐
+    │         PLANNING EXPERT              │
+    │  Decompose topic into 3-5 sub-tasks  │
+    └──────────────┬───────────────────────┘
+                   │
+    ┌──────────────┼──────────────┬──────────────┐
+    ▼              ▼              ▼              ▼
+┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
+│Search  │   │Search  │   │Search  │   │Search  │
+│Task 1  │   │Task 2  │   │Task 3  │   │Task 4  │
+│(Tavily)│   │(Tavily)│   │(Tavily)│   │(Tavily)│
+└───┬────┘   └───┬────┘   └───┬────┘   └───┬────┘
+    │            │            │            │
+    ▼            ▼            ▼            ▼
+┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
+│Summary │   │Summary │   │Summary │   │Summary │
+│Expert  │   │Expert  │   │Expert  │   │Expert  │
+└───┬────┘   └───┬────┘   └───┬────┘   └───┬────┘
+    └──────────────┼──────────────┴──────────────┘
+                   │
+                   ▼
+    ┌──────────────────────────────────────┐
+    │        REPORT WRITING EXPERT         │
+    │  Synthesize all notes → structured   │
+    │  report with citations               │
+    └──────────────────────────────────────┘
 ```
 
-## 技术栈
+---
 
-| 组件       | 技术                                       |
-| ---------- | ------------------------------------------ |
-| 后端框架   | Python 3.12+, FastAPI, uvicorn             |
-| Agent 框架 | HelloAgents 0.2.9                          |
-| 大模型     | 支持 OpenAI/Ollama/LMStudio/custom API     |
-| 搜索引擎   | Tavily API / DuckDuckGo                    |
-| 前端       | Vue 3 + TypeScript + Vite                  |
-| 包管理     | uv (后端), npm (前端)                      |
+## 🏗️ Architecture
 
-## 快速开始
+### Multi-Agent Collaboration Pattern
 
-### 环境要求
+The system uses a **Supervisor-Worker** pattern with 4 specialized agents:
 
-- Python >= 3.10
-- Node.js >= 18
-- uv (推荐) 或 pip
+| Agent               | Role                      | Key Capability                                |
+| ------------------- | ------------------------- | --------------------------------------------- |
+| **Planning Expert** | Decompose complex topics  | Generates 3-5 focused sub-tasks               |
+| **Search Agent**    | Web information retrieval | Tavily API / DuckDuckGo fallback              |
+| **Summary Expert**  | Extract key insights      | Distills search results into structured notes |
+| **Report Writer**   | Synthesize final output   | Merges all notes with citations               |
 
-### 1. 后端配置
+### Real-Time Streaming (SSE)
+
+The entire research pipeline streams events to the frontend via **Server-Sent Events**:
+
+```
+status → todo_list → task_status → sources → 
+task_summary_chunk → final_report → done
+```
+
+Users see the research unfold in real-time — not a loading spinner.
+
+---
+
+## 🔑 Key Features
+
+### 1. Intelligent Topic Decomposition
+
+The Planning Expert doesn't just split by keywords — it reasons about the research domain:
+
+- Identifies subtopics, competing perspectives, and knowledge gaps
+- Structures tasks for maximum coverage
+- Avoids overlapping research areas
+
+### 2. Multi-Engine Search with Fallback
+
+```
+Primary: Tavily API (AI-optimized search)
+   │
+   └── Fallback: DuckDuckGo (no API key required)
+```
+
+### 3. Tool Event Tracking
+
+Every agent action is tracked as a tool event — providing full observability:
+
+- What was searched
+- Which sources were retrieved
+- What notes were created
+- Full audit trail for the final report
+
+### 4. Model Provider Flexibility
+
+Supports multiple LLM backends through a unified interface:
+
+| Provider   | Setup                                |
+| ---------- | ------------------------------------ |
+| OpenAI     | Set `LLM_PROVIDER=openai` + API key  |
+| Ollama     | Set `LLM_PROVIDER=ollama` (local)    |
+| LM Studio  | Set `LLM_PROVIDER=lmstudio` (local)  |
+| Custom API | Set `LLM_PROVIDER=custom` + base URL |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python ≥ 3.10
+- Node.js ≥ 18
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+
+### Backend
 
 ```bash
 cd backend
-
-# 复制环境变量模板并编辑
 cp .env.example .env
-# 编辑 .env，填入 API Key 和搜索引擎配置
+# Edit .env:
+#   LLM_PROVIDER=openai
+#   LLM_MODEL_ID=gpt-4o
+#   LLM_API_KEY=sk-...
+#   SEARCH_API=tavily
+#   TAVILY_API_KEY=tvly-...
 
-# 安装依赖
 uv sync
-
-# 启动服务
 uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 2. 环境变量说明
-
-```env
-# 模型提供者 (ollama / lmstudio / custom)
-LLM_PROVIDER=custom
-
-# 模型名称
-LLM_MODEL_ID=gpt-4o
-
-# API 密钥
-LLM_API_KEY=sk-xxxxx
-
-# 服务地址（custom 模式）
-LLM_BASE_URL=https://api.openai.com/v1
-
-# 搜索引擎 (tavily / duckduckgo)
-SEARCH_API=tavily
-TAVILY_API_KEY=tvly-xxxxx
-```
-
-### 3. 前端启动
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
+# Opens at http://localhost:5173
 ```
 
-前端默认运行在 `http://localhost:5173`，自动代理 API 请求到 `http://localhost:8000`。
+### API Endpoints
 
-## API 接口
+| Method | Path               | Description                                |
+| ------ | ------------------ | ------------------------------------------ |
+| `POST` | `/research`        | Synchronous research (returns full report) |
+| `POST` | `/research/stream` | Streaming research (SSE events)            |
+| `GET`  | `/healthz`         | Health check                               |
 
-### `POST /research` — 同步研究
+```bash
+# Sync research
+curl -X POST http://localhost:8000/research \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Latest advances in RAG systems", "search_api": "tavily"}'
 
-```json
-{
-  "topic": "Python 异步编程",
-  "search_api": "tavily"
-}
+# Streaming research
+curl -N -X POST http://localhost:8000/research/stream \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Multi-agent collaboration patterns", "search_api": "tavily"}'
 ```
 
-### `POST /research/stream` — 流式研究 (SSE)
+---
 
-流式返回各阶段事件：`status` → `todo_list` → `task_status` → `sources` → `task_summary_chunk` → `final_report` → `done`
+## 📁 Project Structure
 
-### `GET /healthz` — 健康检查
+```
+agentProjet/
+├── backend/
+│   ├── src/
+│   │   ├── main.py              # FastAPI entry point (REST + SSE)
+│   │   ├── agent.py             # DeepResearchAgent coordinator
+│   │   ├── config.py            # Pydantic settings model
+│   │   ├── models.py            # Data models (TodoItem, SummaryState)
+│   │   ├── prompts.py           # Agent prompt templates
+│   │   ├── utils.py             # Utility functions
+│   │   └── services/
+│   │       ├── planner.py       # Research planning agent
+│   │       ├── search.py        # Search dispatch (Tavily/DuckDuckGo)
+│   │       ├── summarizer.py    # Task summarization agent
+│   │       ├── reporter.py      # Report writing agent
+│   │       ├── tool_events.py   # Tool call event tracking
+│   │       └── notes.py         # Notes tool
+│   └── pyproject.toml
+├── frontend/
+│   ├── src/
+│   │   ├── App.vue              # Main page component
+│   │   ├── services/api.ts      # SSE streaming API client
+│   │   └── main.ts              # Entry point
+│   └── package.json
+└── README.md
+```
 
-## 修复记录
+---
 
-详见 [源代码注释](backend/src/agent.py) 和 [提交历史](https://github.com/qingyvsan/-/commits/main)。
+## 🛠️ Tech Stack
+
+| Component           | Technology                  | Purpose                    |
+| ------------------- | --------------------------- | -------------------------- |
+| **Agent Framework** | HelloAgents 0.2.9           | Multi-agent orchestration  |
+| **Backend**         | FastAPI + uvicorn           | Async REST + SSE streaming |
+| **LLM**             | OpenAI / Ollama / LM Studio | Multi-provider support     |
+| **Search**          | Tavily API + DuckDuckGo     | Web search with fallback   |
+| **Frontend**        | Vue 3 + TypeScript + Vite   | Reactive streaming UI      |
+| **Package Mgmt**    | uv (Python) + npm (Node)    | Fast, reproducible builds  |
+
+---
+
+## 🎓 Design Decisions
+
+### Why SSE instead of WebSocket?
+
+Research is a **one-directional** data flow: server → client. SSE is simpler than WebSocket (no handshake upgrade, no bidirectional protocol overhead), works through all proxies, and auto-reconnects on drop. WebSocket would add complexity for no benefit.
+
+### Why HelloAgents framework?
+
+Lightweight, Python-native, and designed for the exact multi-agent pattern used here (plan → execute → summarize → report). Compared to LangChain/LangGraph, HelloAgents has significantly less abstraction overhead.
+
+### Why separate Summary Expert per task?
+
+Having a dedicated summarizer for each search task (rather than one global summarizer) means each task produces **focused, context-rich notes**. The Report Writer then synthesizes notes that already have domain-specific structure.
+
+---
+
+## 📄 License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+*Research shouldn't be manual. Let agents do the heavy lifting while you focus on insights.*
